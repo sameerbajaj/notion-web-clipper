@@ -837,123 +837,58 @@
       color: var(--text-secondary);
     }
 
-    /* ─── DYNAMIC PROPERTIES ─── */
-    .dyn-section {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+    /* ─── DYNAMIC PROPERTIES (inline field-row style) ─── */
+    .dyn-props-inline {
+      display: contents; /* each child flows directly in the parent flex column */
     }
 
-    .dyn-section-label {
-      font-size: 10px;
-      font-family: 'DM Mono', monospace;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      padding: 0 2px;
-    }
-
-    .dyn-prop {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      overflow: hidden;
-      transition: border-color 0.15s;
-    }
-
-    .dyn-prop:focus-within {
-      border-color: var(--border-active);
-    }
-
-    .dyn-prop-header {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 10px;
-      border-bottom: 1px solid var(--border);
-      background: var(--surface2);
-    }
-
-    .dyn-prop-icon {
-      font-size: 11px;
-    }
-
-    .dyn-prop-name {
-      font-size: 11px;
-      font-family: 'DM Mono', monospace;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      flex: 1;
-    }
-
-    .dyn-prop-type {
-      font-size: 9px;
-      font-family: 'DM Mono', monospace;
-      color: var(--text-muted);
-      background: var(--surface3);
-      padding: 2px 5px;
-      border-radius: 3px;
-    }
-
-    .options-grid {
+    /* Chip row inside a field-row */
+    .chips-wrap {
       display: flex;
       flex-wrap: wrap;
       gap: 5px;
-      padding: 8px 10px;
+      flex: 1;
+      min-width: 0;
     }
 
     .opt-chip {
-      padding: 4px 10px;
+      padding: 3px 9px;
       border-radius: 20px;
       font-size: 11.5px;
       cursor: pointer;
-      border: 1px solid transparent;
+      border: 1px solid var(--border);
       transition: all 0.12s;
       user-select: none;
       background: var(--surface3);
       color: var(--text-secondary);
       font-family: 'DM Sans', sans-serif;
+      white-space: nowrap;
     }
 
     .opt-chip:hover {
       color: var(--text-primary);
       border-color: var(--border-active);
+      background: var(--surface2);
     }
 
     .opt-chip.selected {
       background: var(--accent-dim);
-      border-color: var(--accent-glow);
+      border-color: var(--accent);
       color: var(--accent);
       font-weight: 500;
     }
 
-    .opt-chip.multi.selected {
-      background: var(--accent-dim);
-      border-color: var(--accent-glow);
-      color: var(--accent);
-    }
-
-    /* Notion color chips */
-    .opt-chip[data-color="default"] { }
-    .opt-chip[data-color="blue"].selected { background: rgba(90,150,220,0.12); border-color: rgba(90,150,220,0.3); color: #7ab3f0; }
-    .opt-chip[data-color="red"].selected { background: rgba(220,90,90,0.12); border-color: rgba(220,90,90,0.3); color: #f09090; }
-    .opt-chip[data-color="green"].selected { background: rgba(90,200,120,0.12); border-color: rgba(90,200,120,0.3); color: #6fd49a; }
-    .opt-chip[data-color="yellow"].selected { background: rgba(232,197,71,0.12); border-color: rgba(232,197,71,0.3); color: #e8c547; }
-    .opt-chip[data-color="orange"].selected { background: rgba(230,150,80,0.12); border-color: rgba(230,150,80,0.3); color: #e8a06a; }
-    .opt-chip[data-color="pink"].selected { background: rgba(220,120,180,0.12); border-color: rgba(220,120,180,0.3); color: #e89ad0; }
-    .opt-chip[data-color="purple"].selected { background: rgba(160,110,220,0.12); border-color: rgba(160,110,220,0.3); color: #c09aee; }
-    .opt-chip[data-color="gray"].selected, .opt-chip[data-color="grey"].selected { background: rgba(130,130,130,0.12); border-color: rgba(130,130,130,0.3); color: #a0a0a0; }
-    .opt-chip[data-color="brown"].selected { background: rgba(160,120,80,0.12); border-color: rgba(160,120,80,0.3); color: #c0966a; }
-
-    /* Loading DB schema */
-    .dyn-loading {
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 11.5px;
-      padding: 10px;
-      font-family: 'DM Mono', monospace;
-    }
+    /* Notion color chips when selected */
+    .opt-chip[data-color="blue"].selected    { background: rgba(90,150,220,0.12); border-color: #7ab3f0; color: #7ab3f0; }
+    .opt-chip[data-color="red"].selected     { background: rgba(220,90,90,0.12);  border-color: #f09090; color: #f09090; }
+    .opt-chip[data-color="green"].selected   { background: rgba(90,200,120,0.12); border-color: #6fd49a; color: #6fd49a; }
+    .opt-chip[data-color="yellow"].selected  { background: rgba(232,197,71,0.12); border-color: #e8c547; color: #e8c547; }
+    .opt-chip[data-color="orange"].selected  { background: rgba(230,150,80,0.12); border-color: #e8a06a; color: #e8a06a; }
+    .opt-chip[data-color="pink"].selected    { background: rgba(220,120,180,0.12);border-color: #e89ad0; color: #e89ad0; }
+    .opt-chip[data-color="purple"].selected  { background: rgba(160,110,220,0.12);border-color: #c09aee; color: #c09aee; }
+    .opt-chip[data-color="gray"].selected,
+    .opt-chip[data-color="grey"].selected    { background: rgba(130,130,130,0.12);border-color: #a0a0a0; color: #a0a0a0; }
+    .opt-chip[data-color="brown"].selected   { background: rgba(160,120,80,0.12); border-color: #c0966a; color: #c0966a; }
 
     /* Fade animation for screens */
     .fade-in {
@@ -1109,14 +1044,10 @@
       <span class="toggle-label">Save full page content as body</span>
     </label>
 
-    <div class="divider"></div>
+    <!-- Dynamic DB properties inject here (inline field-rows) -->
+    <div id="dyn-props-container"></div>
 
-    <!-- Dynamic DB properties (select / multi_select) -->
-    <div id="dyn-props-section" class="dyn-section" style="display:none;">
-      <div class="dyn-section-label">Database properties</div>
-      <div id="dyn-props-container"></div>
-      <div class="divider"></div>
-    </div>
+    <div class="divider"></div>
 
     <!-- Database -->
     <div class="db-selector">

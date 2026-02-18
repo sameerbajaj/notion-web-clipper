@@ -161,18 +161,25 @@ function buildNotionProperties(pageData) {
     };
   }
 
-  // Full tweet text as its own rich_text column
-  if (pageData.tweetContent) {
-    props['tweet'] = {
-      rich_text: [{ text: { content: pageData.tweetContent.slice(0, 2000) } }]
-    };
-  }
-
   return props;
 }
 
 function buildNotionBlocks(pageData) {
   const blocks = [];
+
+  // Full tweet text as first block (not a DB column, works with any existing DB)
+  if (pageData.tweetContent) {
+    blocks.push({
+      object: 'block',
+      type: 'callout',
+      callout: {
+        rich_text: [{ text: { content: pageData.tweetContent.slice(0, 2000) } }],
+        icon: { emoji: '🐦' },
+        color: 'blue_background',
+      }
+    });
+    blocks.push({ object: 'block', type: 'divider', divider: {} });
+  }
 
   if (pageData.selectedText) {
     blocks.push({
@@ -287,7 +294,6 @@ async function handleCreateDatabase({ token, parentPageId, databaseName }) {
       },
       site: { rich_text: {} },
       'cover image': { url: {} },
-      tweet: { rich_text: {} },
     }
   };
 
@@ -387,7 +393,7 @@ async function handleGetDatabase(token, databaseId) {
   // Extract only select and multi_select properties (and their options) that are user-defined
   // Note: 'tags' is NOT skipped — it's a multi_select users want to pick from
   const SKIP = new Set(['title', 'source', 'author', 'published', 'created', 'description',
-    'type', 'site', 'cover image', 'tweet']);
+    'type', 'site', 'cover image']);
 
   const customProps = [];
   for (const [name, prop] of Object.entries(db.properties || {})) {

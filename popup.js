@@ -251,16 +251,12 @@ $('db-select').addEventListener('change', e => {
 
 async function loadDatabaseSchema(databaseId) {
   const container = $('dyn-props-container');
-  const section = $('dyn-props-section');
   state.extraProperties = {};
+  container.innerHTML = '';
 
-  if (!databaseId || !state.token) {
-    section.style.display = 'none';
-    return;
-  }
+  if (!databaseId || !state.token) return;
 
-  container.innerHTML = '<div class="dyn-loading">Loading properties…</div>';
-  section.style.display = 'flex';
+  container.innerHTML = '<div style="padding:6px 2px;font-size:11px;font-family:\'DM Mono\',monospace;color:var(--text-muted);">Loading properties…</div>';
 
   try {
     const res = await chrome.runtime.sendMessage({
@@ -271,16 +267,14 @@ async function loadDatabaseSchema(databaseId) {
 
     if (!res.success) throw new Error(res.error);
     state.dbSchema = res.result;
+    container.innerHTML = '';
 
-    if (!res.result.customProps.length) {
-      section.style.display = 'none';
-      return;
+    if (res.result.customProps.length) {
+      renderDynamicProps(res.result.customProps);
     }
 
-    renderDynamicProps(res.result.customProps);
-
   } catch (err) {
-    section.style.display = 'none';
+    container.innerHTML = '';
     console.warn('Could not load DB schema:', err.message);
   }
 }
@@ -292,22 +286,31 @@ function renderDynamicProps(props) {
   props.forEach(prop => {
     const isMulti = prop.type === 'multi_select';
 
-    const el = document.createElement('div');
-    el.className = 'dyn-prop';
-    el.innerHTML = `
-      <div class="dyn-prop-header">
-        <span class="dyn-prop-icon">${isMulti ? '⋱' : '▽'}</span>
-        <span class="dyn-prop-name">${escapeHtml(prop.name)}</span>
-        <span class="dyn-prop-type">${isMulti ? 'multi' : 'select'}</span>
-      </div>
-      <div class="options-grid" data-prop="${escapeHtml(prop.name)}" data-multi="${isMulti}"></div>
-    `;
+    // Pill icon SVG (same size as other field-row icons)
+    const iconSvg = isMulti
+      ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="4"/><circle cx="15" cy="12" r="4"/></svg>`
+      : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
 
-    const grid = el.querySelector('.options-grid');
+    const row = document.createElement('div');
+    row.className = 'field-row';
+    row.style.cssText = 'flex-wrap:wrap; row-gap:6px; align-items:flex-start; padding-top:8px; padding-bottom:8px;';
+
+    const icon = document.createElement('div');
+    icon.className = 'field-icon';
+    icon.innerHTML = iconSvg;
+
+    const label = document.createElement('span');
+    label.className = 'field-label';
+    label.textContent = prop.name;
+
+    const chipsWrap = document.createElement('div');
+    chipsWrap.className = 'chips-wrap';
+    chipsWrap.dataset.prop = prop.name;
+    chipsWrap.dataset.multi = isMulti;
 
     prop.options.forEach(opt => {
       const chip = document.createElement('span');
-      chip.className = 'opt-chip' + (isMulti ? ' multi' : '');
+      chip.className = 'opt-chip';
       chip.textContent = opt.name;
       chip.dataset.value = opt.name;
       chip.dataset.color = opt.color || 'default';
@@ -316,29 +319,28 @@ function renderDynamicProps(props) {
         if (isMulti) {
           chip.classList.toggle('selected');
           const cur = state.extraProperties[prop.name] || [];
-          if (chip.classList.contains('selected')) {
-            state.extraProperties[prop.name] = [...cur, opt.name];
-          } else {
-            state.extraProperties[prop.name] = cur.filter(v => v !== opt.name);
-          }
+          state.extraProperties[prop.name] = chip.classList.contains('selected')
+            ? [...cur, opt.name]
+            : cur.filter(v => v !== opt.name);
         } else {
-          // single select — deselect others
-          grid.querySelectorAll('.opt-chip').forEach(c => c.classList.remove('selected'));
-          const alreadySelected = state.extraProperties[prop.name] === opt.name;
-          if (alreadySelected) {
-            chip.classList.remove('selected');
-            state.extraProperties[prop.name] = null;
-          } else {
+          chipsWrap.querySelectorAll('.opt-chip').forEach(c => c.classList.remove('selected'));
+          const wasSelected = chip.classList.contains('selected');
+          if (!wasSelected) {
             chip.classList.add('selected');
             state.extraProperties[prop.name] = opt.name;
+          } else {
+            state.extraProperties[prop.name] = null;
           }
         }
       });
 
-      grid.appendChild(chip);
+      chipsWrap.appendChild(chip);
     });
 
-    container.appendChild(el);
+    row.appendChild(icon);
+    row.appendChild(label);
+    row.appendChild(chipsWrap);
+    container.appendChild(row);
   });
 }
 
