@@ -168,6 +168,12 @@ function buildNotionProperties(pageData) {
     };
   }
 
+  return props;
+}
+
+function buildNotionBlocks(pageData) {
+  const blocks = [];
+
   if (pageData.selectedText) {
     blocks.push({
       object: 'block',
@@ -379,8 +385,9 @@ async function handleGetDatabase(token, databaseId) {
   const db = await response.json();
 
   // Extract only select and multi_select properties (and their options) that are user-defined
+  // Note: 'tags' is NOT skipped — it's a multi_select users want to pick from
   const SKIP = new Set(['title', 'source', 'author', 'published', 'created', 'description',
-    'tags', 'type', 'site', 'cover image', 'tweet']);
+    'type', 'site', 'cover image', 'tweet']);
 
   const customProps = [];
   for (const [name, prop] of Object.entries(db.properties || {})) {
