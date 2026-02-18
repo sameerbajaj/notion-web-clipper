@@ -390,10 +390,10 @@ async function handleGetDatabase(token, databaseId) {
 
   const db = await response.json();
 
-  // Extract only select and multi_select properties (and their options) that are user-defined
-  // Note: 'tags' is NOT skipped — it's a multi_select users want to pick from
+  // Skip properties that already have dedicated inputs in the popup UI.
+  // Everything else with select/multi_select options surfaces as chips.
   const SKIP = new Set(['title', 'source', 'author', 'published', 'created', 'description',
-    'type', 'site', 'cover image']);
+    'cover image', 'tags']);
 
   const customProps = [];
   for (const [name, prop] of Object.entries(db.properties || {})) {
