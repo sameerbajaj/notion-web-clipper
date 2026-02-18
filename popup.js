@@ -256,6 +256,12 @@ async function loadDatabaseSchema(databaseId) {
 
   if (!databaseId || !state.token) return;
 
+  // If we already have the schema for this DB cached in state, render immediately
+  if (state.dbSchema && state.dbSchema.id === databaseId) {
+    if (state.dbSchema.customProps.length) renderDynamicProps(state.dbSchema.customProps);
+    return;
+  }
+
   container.innerHTML = '<div style="padding:6px 2px;font-size:11px;font-family:\'DM Mono\',monospace;color:var(--text-muted);">Loading properties…</div>';
 
   try {
@@ -283,8 +289,14 @@ function renderDynamicProps(props) {
   const container = $('dyn-props-container');
   container.innerHTML = '';
 
+  // Auto-detected values to pre-select (maps lowercase prop name → value)
+  const autoValues = {
+    type: state.pageData?.type || null,
+  };
+
   props.forEach(prop => {
     const isMulti = prop.type === 'multi_select';
+    const autoVal = autoValues[prop.name.toLowerCase()] || null;
 
     // Pill icon SVG (same size as other field-row icons)
     const iconSvg = isMulti
@@ -314,6 +326,12 @@ function renderDynamicProps(props) {
       chip.textContent = opt.name;
       chip.dataset.value = opt.name;
       chip.dataset.color = opt.color || 'default';
+
+      // Pre-select if it matches the auto-detected value
+      if (!isMulti && autoVal && opt.name.toLowerCase() === autoVal.toLowerCase()) {
+        chip.classList.add('selected');
+        state.extraProperties[prop.name] = opt.name;
+      }
 
       chip.addEventListener('click', () => {
         if (isMulti) {

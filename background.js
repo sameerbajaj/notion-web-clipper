@@ -373,7 +373,17 @@ async function handleSearchPages(token, query) {
   }));
 }
 
+const SCHEMA_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
 async function handleGetDatabase(token, databaseId) {
+  // Serve from cache if fresh
+  const cacheKey = `schema_${databaseId}`;
+  const cached = await chrome.storage.local.get(cacheKey);
+  if (cached[cacheKey]) {
+    const { ts, data } = cached[cacheKey];
+    if (Date.now() - ts < SCHEMA_CACHE_TTL) return data;
+  }
+
   const response = await fetch(`https://api.notion.com/v1/databases/${databaseId}`, {
     method: 'GET',
     headers: {
@@ -390,10 +400,10 @@ async function handleGetDatabase(token, databaseId) {
 
   const db = await response.json();
 
-  // Skip properties that already have dedicated inputs in the popup UI.
-  // Everything else with select/multi_select options surfaces as chips.
+  // Skip only properties that have a dedicated text/date input already in the popup.
+  // select and multi_select props NOT in this list will surface as clickable chips.
   const SKIP = new Set(['title', 'source', 'author', 'published', 'created', 'description',
-    'cover image', 'tags']);
+    'cover image']);
 
   const customProps = [];
   for (const [name, prop] of Object.entries(db.properties || {})) {
@@ -413,9 +423,14 @@ async function handleGetDatabase(token, databaseId) {
     }
   }
 
-  return {
+  const result = {
     id: db.id,
     name: db.title?.[0]?.plain_text || 'Untitled',
     customProps,
   };
+
+  // Cache the result
+  await chrome.storage.local.set({ [cacheKey]: { ts: Date.now(), data: result } });
+
+  return result;
 }
