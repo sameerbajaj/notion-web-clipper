@@ -318,48 +318,122 @@ function renderDynamicProps(props) {
     const chipsWrap = document.createElement('div');
     chipsWrap.className = 'chips-wrap';
     chipsWrap.dataset.prop = prop.name;
-    chipsWrap.dataset.multi = isMulti;
+    chipsWrap.dataset.multi = String(isMulti);
 
-    prop.options.forEach(opt => {
+    const createChip = (optionName, color = 'default', selected = false) => {
       const chip = document.createElement('span');
       chip.className = 'opt-chip';
-      chip.textContent = opt.name;
-      chip.dataset.value = opt.name;
-      chip.dataset.color = opt.color || 'default';
+      chip.textContent = optionName;
+      chip.dataset.value = optionName;
+      chip.dataset.color = color || 'default';
 
-      // Pre-select if it matches the auto-detected value
-      if (!isMulti && autoVal && opt.name.toLowerCase() === autoVal.toLowerCase()) {
-        chip.classList.add('selected');
-        state.extraProperties[prop.name] = opt.name;
-      }
+      if (selected) chip.classList.add('selected');
 
       chip.addEventListener('click', () => {
         if (isMulti) {
           chip.classList.toggle('selected');
-          const cur = state.extraProperties[prop.name] || [];
-          state.extraProperties[prop.name] = chip.classList.contains('selected')
-            ? [...cur, opt.name]
-            : cur.filter(v => v !== opt.name);
-        } else {
-          chipsWrap.querySelectorAll('.opt-chip').forEach(c => c.classList.remove('selected'));
-          const wasSelected = chip.classList.contains('selected');
-          if (!wasSelected) {
-            chip.classList.add('selected');
-            state.extraProperties[prop.name] = opt.name;
+          const cur = Array.isArray(state.extraProperties[prop.name]) ? state.extraProperties[prop.name] : [];
+          if (chip.classList.contains('selected')) {
+            state.extraProperties[prop.name] = uniqueCaseInsensitive([...cur, optionName]);
           } else {
-            state.extraProperties[prop.name] = null;
+            state.extraProperties[prop.name] = cur.filter(v => v !== optionName);
           }
+          return;
+        }
+
+        const wasSelected = chip.classList.contains('selected');
+        chipsWrap.querySelectorAll('.opt-chip').forEach(c => c.classList.remove('selected'));
+        if (!wasSelected) {
+          chip.classList.add('selected');
+          state.extraProperties[prop.name] = optionName;
+        } else {
+          state.extraProperties[prop.name] = null;
         }
       });
 
       chipsWrap.appendChild(chip);
+      return chip;
+    };
+
+    prop.options.forEach(opt => {
+      const shouldPreselect = !isMulti && autoVal && opt.name.toLowerCase() === autoVal.toLowerCase();
+      createChip(opt.name, opt.color || 'default', shouldPreselect);
+      if (shouldPreselect) state.extraProperties[prop.name] = opt.name;
     });
+
+    const addWrap = document.createElement('div');
+    addWrap.className = 'dyn-opt-add-wrap';
+
+    const addInput = document.createElement('input');
+    addInput.className = 'dyn-opt-input';
+    addInput.type = 'text';
+    addInput.placeholder = isMulti ? 'Add option…' : 'Add/select option…';
+    addInput.maxLength = 100;
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'dyn-opt-add-btn';
+    addBtn.type = 'button';
+    addBtn.textContent = 'Add';
+
+    const onAddOption = () => {
+      const value = normalizeOptionName(addInput.value);
+      if (!value) return;
+
+      const existing = [...chipsWrap.querySelectorAll('.opt-chip')]
+        .find(c => c.dataset.value?.toLowerCase() === value.toLowerCase());
+
+      if (existing) {
+        existing.click();
+        addInput.value = '';
+        return;
+      }
+
+      const newChip = createChip(value, 'default', true);
+
+      if (isMulti) {
+        const cur = Array.isArray(state.extraProperties[prop.name]) ? state.extraProperties[prop.name] : [];
+        state.extraProperties[prop.name] = uniqueCaseInsensitive([...cur, value]);
+      } else {
+        chipsWrap.querySelectorAll('.opt-chip').forEach(c => c.classList.remove('selected'));
+        newChip.classList.add('selected');
+        state.extraProperties[prop.name] = value;
+      }
+
+      addInput.value = '';
+    };
+
+    addBtn.addEventListener('click', onAddOption);
+    addInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        onAddOption();
+      }
+    });
+
+    addWrap.appendChild(addInput);
+    addWrap.appendChild(addBtn);
 
     row.appendChild(icon);
     row.appendChild(label);
     row.appendChild(chipsWrap);
+    row.appendChild(addWrap);
     container.appendChild(row);
   });
+}
+
+function normalizeOptionName(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').slice(0, 100);
+}
+
+function uniqueCaseInsensitive(values) {
+  const map = new Map();
+  values.forEach(v => {
+    const cleaned = normalizeOptionName(v);
+    if (!cleaned) return;
+    const key = cleaned.toLowerCase();
+    if (!map.has(key)) map.set(key, cleaned);
+  });
+  return [...map.values()];
 }
 
 // ─── SAVE ────────────────────────────────────────────────────────────────────

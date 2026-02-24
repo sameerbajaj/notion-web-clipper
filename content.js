@@ -1,5 +1,67 @@
 // Content script: extracts page metadata and full article content
 
+function getTweetStatusId(url) {
+  const match = url.match(/\/status\/(\d+)/);
+  return match?.[1] || null;
+}
+
+function getPrimaryTweetArticle() {
+  const statusId = getTweetStatusId(window.location.href);
+  const allArticles = [...document.querySelectorAll('article')];
+
+  if (!allArticles.length) return null;
+  if (!statusId) return allArticles[0];
+
+  const matched = allArticles.find(article =>
+    article.querySelector(`a[href*="/status/${statusId}"]`)
+  );
+
+  return matched || allArticles[0];
+}
+
+function extractTweetAuthor(article) {
+  const authorSelectors = [
+    '[data-testid="User-Name"] a[role="link"] span',
+    '[data-testid="User-Name"] div[dir="ltr"] span',
+    '[data-testid="User-Name"] span',
+  ];
+
+  for (const selector of authorSelectors) {
+    const nodes = [...(article?.querySelectorAll(selector) || document.querySelectorAll(selector))];
+    for (const node of nodes) {
+      const text = node.textContent?.trim();
+      if (!text) continue;
+      if (text.startsWith('@')) continue;
+      if (/^·$/.test(text)) continue;
+      return text;
+    }
+  }
+
+  const handleMatch = window.location.pathname.match(/^\/@?([^/]+)/);
+  return handleMatch?.[1] || '';
+}
+
+function extractTweetText(article) {
+  const textEl =
+    article?.querySelector('[data-testid="tweetText"]') ||
+    article?.querySelector('[lang]') ||
+    document.querySelector('[data-testid="tweetText"]') ||
+    document.querySelector('article [lang]');
+
+  return textEl?.innerText?.trim() || '';
+}
+
+function extractTweetProfileImage(article) {
+  const avatar =
+    article?.querySelector('[data-testid="Tweet-User-Avatar"] img') ||
+    article?.querySelector('a[href*="/photo"] img[src*="profile_images"]') ||
+    article?.querySelector('img[src*="profile_images"]') ||
+    document.querySelector('[data-testid="Tweet-User-Avatar"] img') ||
+    document.querySelector('img[src*="profile_images"]');
+
+  return avatar?.getAttribute('src') || avatar?.currentSrc || '';
+}
+
 function extractPageData() {
   const data = {};
 
@@ -19,19 +81,14 @@ function extractPageData() {
   // For tweets: build a clean short title from author + first line of content
   // Full tweet text goes into tweetContent separately
   if (data.type === 'tweet') {
-    const tweetAuthorEl =
-      document.querySelector('[data-testid="User-Name"] span') ||
-      document.querySelector('.css-1jxf684') ||
-      null;
-    const tweetAuthor = tweetAuthorEl?.textContent?.trim() || '';
-
-    // Grab the full tweet text from the DOM
-    const tweetEl =
-      document.querySelector('[data-testid="tweetText"]') ||
-      document.querySelector('article [lang]');
-    const tweetText = tweetEl?.innerText?.trim() || '';
+    const tweetArticle = getPrimaryTweetArticle();
+    const tweetAuthor = extractTweetAuthor(tweetArticle);
+    const tweetText = extractTweetText(tweetArticle);
+    const tweetProfileImage = extractTweetProfileImage(tweetArticle);
 
     data.tweetContent = tweetText; // full tweet goes to its own column
+    if (tweetAuthor) data.author = tweetAuthor;
+    if (tweetProfileImage) data.coverImage = tweetProfileImage;
 
     // Smart short title
     if (tweetAuthor) {
@@ -54,13 +111,15 @@ function extractPageData() {
     '';
 
   // Author
-  data.author =
+  if (!data.author) {
+    data.author =
     document.querySelector('meta[name="author"]')?.content ||
     document.querySelector('meta[property="article:author"]')?.content ||
     document.querySelector('[rel="author"]')?.textContent?.trim() ||
     document.querySelector('.author')?.textContent?.trim() ||
     document.querySelector('[class*="author"]')?.textContent?.trim() ||
     '';
+  }
 
   // Twitter/X handle detection
   const twitterMeta = document.querySelector('meta[name="twitter:creator"]')?.content;
@@ -89,10 +148,12 @@ function extractPageData() {
     `${window.location.origin}/favicon.ico`;
 
   // Cover image
-  data.coverImage =
+  if (!data.coverImage) {
+    data.coverImage =
     document.querySelector('meta[property="og:image"]')?.content ||
     document.querySelector('meta[name="twitter:image"]')?.content ||
     '';
+  }
 
   // Keywords/tags
   const keywords = document.querySelector('meta[name="keywords"]')?.content || '';
